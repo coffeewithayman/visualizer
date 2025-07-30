@@ -165,6 +165,8 @@
                     
                     if (targetHeight > this.barHeights[i]) {
                         this.barHeights[i] = targetHeight;
+                    } else if (targetHeight > 0) {
+                        this.barHeights[i] = Math.max(targetHeight, this.barHeights[i] * 0.85);
                     } else {
                         this.barHeights[i] *= 0.85;
                         if (this.barHeights[i] < 2) {
