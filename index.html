@@ -137,6 +137,7 @@
                 this.stopBtn.disabled = true;
                 this.status.textContent = 'Stopped';
                 
+                this.barHeights = [];
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             }
 
@@ -166,6 +167,9 @@
                         this.barHeights[i] = targetHeight;
                     } else {
                         this.barHeights[i] *= 0.85;
+                        if (this.barHeights[i] < 2) {
+                            this.barHeights[i] = 0;
+                        }
                     }
                     
                     barHeight = this.barHeights[i];
