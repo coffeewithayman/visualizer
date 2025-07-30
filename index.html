@@ -84,6 +84,7 @@
                 this.dataArray = null;
                 this.bufferLength = null;
                 this.animationId = null;
+                this.barHeights = [];
                 
                 this.setupEventListeners();
             }
@@ -147,26 +148,36 @@
                 this.ctx.fillStyle = '#111';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                const numBars = 128;
-                const barWidth = this.canvas.width / numBars;
+                const barWidth = (this.canvas.width / this.bufferLength) * 2.5;
                 let barHeight;
                 let x = 0;
                 
-                for (let i = 0; i < numBars; i++) {
-                    const dataIndex = Math.floor(i * (this.bufferLength / numBars));
-                    let value = this.dataArray[dataIndex];
+                if (this.barHeights.length === 0) {
+                    this.barHeights = new Array(this.bufferLength).fill(0);
+                }
+                
+                for (let i = 0; i < this.bufferLength; i++) {
+                    let value = this.dataArray[i];
                     
                     value = Math.pow(value / 255, 0.7) * 255;
-                    barHeight = (value / 255) * this.canvas.height * 1.5;
+                    let targetHeight = (value / 255) * this.canvas.height * 1.5;
                     
-                    const r = Math.min(255, barHeight * 2 + 25 * (i / numBars));
-                    const g = 250 * (i / numBars);
+                    if (targetHeight > this.barHeights[i]) {
+                        this.barHeights[i] = targetHeight;
+                    } else {
+                        this.barHeights[i] *= 0.85;
+                    }
+                    
+                    barHeight = this.barHeights[i];
+                    
+                    const r = Math.min(255, barHeight * 2 + 25 * (i / this.bufferLength));
+                    const g = 250 * (i / this.bufferLength);
                     const b = 50 + (barHeight / this.canvas.height) * 100;
                     
                     this.ctx.fillStyle = `rgb(${r},${g},${b})`;
-                    this.ctx.fillRect(x, this.canvas.height - barHeight, barWidth - 1, barHeight);
+                    this.ctx.fillRect(x, this.canvas.height - barHeight, barWidth, barHeight);
                     
-                    x += barWidth;
+                    x += barWidth + 1;
                 }
             }
         }
