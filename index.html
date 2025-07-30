@@ -104,6 +104,12 @@
                     
                     this.analyser.fftSize = 512;
                     this.analyser.smoothingTimeConstant = 0.3;
+                    
+                    this.audioContext.addEventListener('statechange', () => {
+                        if (this.audioContext.state === 'suspended') {
+                            this.audioContext.resume();
+                        }
+                    });
                     this.analyser.minDecibels = -90;
                     this.analyser.maxDecibels = -10;
                     this.bufferLength = this.analyser.frequencyBinCount;
@@ -128,7 +134,7 @@
                     this.animationId = null;
                 }
                 
-                if (this.audioContext) {
+                if (this.audioContext && this.audioContext.state !== 'closed') {
                     this.audioContext.close();
                     this.audioContext = null;
                 }
@@ -142,9 +148,18 @@
             }
 
             draw() {
+                if (!this.analyser || !this.dataArray) {
+                    return;
+                }
+                
                 this.animationId = requestAnimationFrame(() => this.draw());
                 
-                this.analyser.getByteFrequencyData(this.dataArray);
+                try {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                } catch (error) {
+                    console.warn('Audio analysis error:', error);
+                    return;
+                }
                 
                 this.ctx.fillStyle = '#111';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -163,11 +178,14 @@
                     value = Math.pow(value / 255, 0.7) * 255;
                     let targetHeight = (value / 255) * this.canvas.height * 1.5;
                     
-                    if (targetHeight > this.barHeights[i]) {
+                    // Always use current audio data, but add decay effect for visual smoothness
+                    if (targetHeight > 1) {
+                        // There's audio input - use it directly
                         this.barHeights[i] = targetHeight;
                     } else {
-                        this.barHeights[i] = Math.max(targetHeight, this.barHeights[i] * 0.85);
-                        if (this.barHeights[i] < 2) {
+                        // No significant audio - decay the bar
+                        this.barHeights[i] *= 0.88;
+                        if (this.barHeights[i] < 1) {
                             this.barHeights[i] = 0;
                         }
                     }
