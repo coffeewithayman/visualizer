@@ -129,11 +129,12 @@
         #visualizer-container:-webkit-full-screen #canvas,
         #visualizer-container:-moz-full-screen #canvas,
         #visualizer-container:-ms-fullscreen #canvas {
-            width: 100vw;
-            height: 100vh;
-            max-width: none;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
             border: none;
-            object-fit: cover;
+            display: block;
         }
 
         @media (max-width: 768px) {
@@ -192,8 +193,8 @@
             #visualizer-container:-webkit-full-screen #canvas,
             #visualizer-container:-moz-full-screen #canvas,
             #visualizer-container:-ms-fullscreen #canvas {
-                width: 100vw;
-                height: 100vh;
+                width: 100vw !important;
+                height: 100vh !important;
             }
 
             #visualizer-container:fullscreen #fullscreen-controls,
@@ -319,7 +320,14 @@
                 this.stopBtn.addEventListener('click', () => this.stop());
                 this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
                 this.exitFullscreenBtn.addEventListener('click', () => this.exitFullscreen());
-                window.addEventListener('resize', () => this.setupCanvas());
+                window.addEventListener('resize', () => {
+                    // Delay canvas setup to handle mobile orientation changes
+                    setTimeout(() => this.setupCanvas(), 100);
+                });
+                window.addEventListener('orientationchange', () => {
+                    // Handle mobile orientation changes with longer delay
+                    setTimeout(() => this.setupCanvas(), 500);
+                });
                 
                 // Handle visibility change to re-acquire wake lock if needed
                 document.addEventListener('visibilitychange', () => {
@@ -336,15 +344,35 @@
             }
 
             setupCanvas() {
-                const rect = this.canvas.getBoundingClientRect();
+                const isFullscreen = !!(document.fullscreenElement || 
+                                      document.webkitFullscreenElement || 
+                                      document.mozFullScreenElement || 
+                                      document.msFullscreenElement);
+                
                 const dpr = window.devicePixelRatio || 1;
+                let width, height;
                 
-                this.canvas.width = rect.width * dpr;
-                this.canvas.height = rect.height * dpr;
+                if (isFullscreen) {
+                    // In fullscreen, use full viewport dimensions
+                    width = window.innerWidth;
+                    height = window.innerHeight;
+                } else {
+                    // Normal mode, use container bounds
+                    const rect = this.canvas.getBoundingClientRect();
+                    width = rect.width || 800;
+                    height = rect.height || 400;
+                }
                 
+                // Set canvas resolution
+                this.canvas.width = width * dpr;
+                this.canvas.height = height * dpr;
+                
+                // Scale context for high DPI
                 this.ctx.scale(dpr, dpr);
-                this.canvas.style.width = rect.width + 'px';
-                this.canvas.style.height = rect.height + 'px';
+                
+                // Set display size
+                this.canvas.style.width = width + 'px';
+                this.canvas.style.height = height + 'px';
             }
 
             hexToRgb(hex) {
@@ -422,8 +450,12 @@
                 // Show/hide appropriate buttons
                 this.exitFullscreenBtn.style.display = isFullscreen ? 'block' : 'none';
                 
-                // Resize canvas when entering/exiting fullscreen
-                setTimeout(() => this.setupCanvas(), 100);
+                // Resize canvas when entering/exiting fullscreen with longer delay for mobile
+                setTimeout(() => {
+                    this.setupCanvas();
+                    // Force a second resize after CSS transitions complete
+                    setTimeout(() => this.setupCanvas(), 200);
+                }, 150);
             }
 
             async start() {
