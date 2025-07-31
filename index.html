@@ -52,6 +52,16 @@
             cursor: pointer;
         }
 
+        select {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
         input[type="color"] {
             width: 40px;
             height: 40px;
@@ -70,6 +80,15 @@
         }
 
         button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        select:hover {
+            background: #555;
+        }
+
+        select:disabled {
             background: #666;
             cursor: not-allowed;
         }
@@ -269,6 +288,16 @@
             <label>Brightness</label>
             <input type="range" id="brightness" min="0.1" max="2" step="0.1" value="1">
         </div>
+        <div class="control-group">
+            <label>Visualizer</label>
+            <select id="visualStyle">
+                <option value="bars">Bars</option>
+                <option value="mirror">Mirror Bars</option>
+                <option value="circle">Circle Bars</option>
+                <option value="wave">Waveform</option>
+                <option value="dots">Dots</option>
+            </select>
+        </div>
     </div>
     
     <div id="visualizer-container">
@@ -301,6 +330,10 @@
                 this.midColor = document.getElementById('midColor');
                 this.highColor = document.getElementById('highColor');
                 this.brightness = document.getElementById('brightness');
+                this.styleSelect = document.getElementById('visualStyle');
+                this.visualStyles = ['bars', 'mirror', 'circle', 'wave', 'dots'];
+                this.currentStyle = 0;
+                this.autoSwitchTimer = null;
                 
                 this.audioContext = null;
                 this.analyser = null;
@@ -313,6 +346,7 @@
                 
                 this.setupEventListeners();
                 this.setupCanvas();
+                this.startAutoSwitch();
             }
 
             setupEventListeners() {
@@ -320,6 +354,10 @@
                 this.stopBtn.addEventListener('click', () => this.stop());
                 this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
                 this.exitFullscreenBtn.addEventListener('click', () => this.exitFullscreen());
+                this.styleSelect.addEventListener('change', () => {
+                    this.setStyle(this.styleSelect.value);
+                    this.startAutoSwitch();
+                });
                 window.addEventListener('resize', () => {
                     // Delay canvas setup to handle mobile orientation changes
                     setTimeout(() => this.setupCanvas(), 100);
@@ -390,6 +428,125 @@
                     g: Math.round(color1.g + factor * (color2.g - color1.g)),
                     b: Math.round(color1.b + factor * (color2.b - color1.b))
                 };
+            }
+
+            startAutoSwitch() {
+                if (this.autoSwitchTimer) {
+                    clearInterval(this.autoSwitchTimer);
+                }
+                this.autoSwitchTimer = setInterval(() => {
+                    const next = (this.currentStyle + 1) % this.visualStyles.length;
+                    this.setStyle(this.visualStyles[next]);
+                }, 10000);
+            }
+
+            setStyle(style) {
+                const idx = this.visualStyles.indexOf(style);
+                if (idx !== -1) {
+                    this.currentStyle = idx;
+                    this.styleSelect.value = style;
+                }
+            }
+
+            getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue) {
+                const freqPosition = i / this.bufferLength;
+                const amplitudeIntensity = Math.min(1, barHeight / this.canvas.height);
+                let color;
+                if (freqPosition < 0.33) {
+                    const factor = freqPosition / 0.33;
+                    color = this.interpolateColor(lowRgb, midRgb, factor);
+                } else if (freqPosition < 0.66) {
+                    const factor = (freqPosition - 0.33) / 0.33;
+                    color = this.interpolateColor(midRgb, highRgb, factor);
+                } else {
+                    color = { ...highRgb };
+                }
+
+                const r = Math.min(255, color.r * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
+                const g = Math.min(255, color.g * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
+                const b = Math.min(255, color.b * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
+                return `rgb(${r},${g},${b})`;
+            }
+
+            renderBars(lowRgb, midRgb, highRgb, brightnessValue) {
+                const barWidth = (this.canvas.width / this.bufferLength) * 2.5;
+                let x = 0;
+                for (let i = 0; i < this.bufferLength; i++) {
+                    const barHeight = this.barHeights[i];
+                    this.ctx.fillStyle = this.getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue);
+                    this.ctx.fillRect(x, this.canvas.height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+
+            renderMirror(lowRgb, midRgb, highRgb, brightnessValue) {
+                const barWidth = (this.canvas.width / this.bufferLength) * 2;
+                let x = 0;
+                for (let i = 0; i < this.bufferLength; i++) {
+                    const barHeight = this.barHeights[i] / 2;
+                    const color = this.getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue);
+                    this.ctx.fillStyle = color;
+                    this.ctx.fillRect(x, this.canvas.height / 2 - barHeight, barWidth, barHeight);
+                    this.ctx.fillRect(x, this.canvas.height / 2, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+
+            renderCircle(lowRgb, midRgb, highRgb, brightnessValue) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const radius = Math.min(centerX, centerY) / 2;
+                const step = (2 * Math.PI) / this.bufferLength;
+                this.ctx.lineWidth = 2;
+                for (let i = 0; i < this.bufferLength; i++) {
+                    const barHeight = this.barHeights[i] / 2;
+                    const angle = i * step;
+                    const color = this.getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue);
+                    this.ctx.strokeStyle = color;
+                    const x1 = centerX + radius * Math.cos(angle);
+                    const y1 = centerY + radius * Math.sin(angle);
+                    const x2 = centerX + (radius + barHeight) * Math.cos(angle);
+                    const y2 = centerY + (radius + barHeight) * Math.sin(angle);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                }
+            }
+
+            renderWave(lowRgb, midRgb, highRgb, brightnessValue) {
+                const step = this.canvas.width / this.bufferLength;
+                let prevX = 0;
+                let prevY = this.canvas.height / 2;
+                for (let i = 0; i < this.bufferLength; i++) {
+                    const barHeight = this.barHeights[i] / 2;
+                    const x = i * step;
+                    const y = this.canvas.height / 2 - barHeight;
+                    const color = this.getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue);
+                    this.ctx.strokeStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(prevX, prevY);
+                    this.ctx.lineTo(x, y);
+                    this.ctx.stroke();
+                    prevX = x;
+                    prevY = y;
+                }
+            }
+
+            renderDots(lowRgb, midRgb, highRgb, brightnessValue) {
+                const dotSpacing = (this.canvas.width / this.bufferLength) * 2;
+                let x = dotSpacing / 2;
+                for (let i = 0; i < this.bufferLength; i++) {
+                    const barHeight = this.barHeights[i];
+                    const y = this.canvas.height - barHeight;
+                    const color = this.getColor(i, barHeight, lowRgb, midRgb, highRgb, brightnessValue);
+                    const radius = Math.max(2, barHeight / 10);
+                    this.ctx.fillStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                    x += dotSpacing;
+                }
             }
 
             async requestWakeLock() {
@@ -521,7 +678,7 @@
                 if (!this.analyser || !this.dataArray) {
                     return;
                 }
-                
+
                 this.animationId = requestAnimationFrame(() => this.draw());
                 
                 try {
@@ -533,10 +690,6 @@
                 
                 this.ctx.fillStyle = '#111';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                const barWidth = (this.canvas.width / this.bufferLength) * 2.5;
-                let barHeight;
-                let x = 0;
                 
                 if (this.barHeights.length === 0) {
                     this.barHeights = new Array(this.bufferLength).fill(0);
@@ -550,51 +703,35 @@
 
                 for (let i = 0; i < this.bufferLength; i++) {
                     let value = this.dataArray[i];
-                    
                     value = Math.pow(value / 255, 0.7) * 255;
                     let targetHeight = (value / 255) * this.canvas.height * 1.5;
-                    
-                    // Always use current audio data, but add decay effect for visual smoothness
+
                     if (targetHeight > 1) {
-                        // There's audio input - use it directly
                         this.barHeights[i] = targetHeight;
                     } else {
-                        // No significant audio - decay the bar
                         this.barHeights[i] *= 0.88;
                         if (this.barHeights[i] < 1) {
                             this.barHeights[i] = 0;
                         }
                     }
-                    
-                    barHeight = this.barHeights[i];
-                    
-                    // Calculate color based on frequency position and amplitude
-                    const freqPosition = i / this.bufferLength;
-                    const amplitudeIntensity = Math.min(1, barHeight / this.canvas.height);
-                    
-                    let color;
-                    if (freqPosition < 0.33) {
-                        // Low frequencies - blend between low and mid colors
-                        const factor = freqPosition / 0.33;
-                        color = this.interpolateColor(lowRgb, midRgb, factor);
-                    } else if (freqPosition < 0.66) {
-                        // Mid frequencies - blend between mid and high colors
-                        const factor = (freqPosition - 0.33) / 0.33;
-                        color = this.interpolateColor(midRgb, highRgb, factor);
-                    } else {
-                        // High frequencies - use high color with intensity variation
-                        color = { ...highRgb };
-                    }
-                    
-                    // Apply brightness and amplitude intensity
-                    const r = Math.min(255, color.r * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
-                    const g = Math.min(255, color.g * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
-                    const b = Math.min(255, color.b * brightnessValue * (0.3 + 0.7 * amplitudeIntensity));
-                    
-                    this.ctx.fillStyle = `rgb(${r},${g},${b})`;
-                    this.ctx.fillRect(x, this.canvas.height - barHeight, barWidth, barHeight);
-                    
-                    x += barWidth + 1;
+                }
+
+                switch (this.visualStyles[this.currentStyle]) {
+                    case 'mirror':
+                        this.renderMirror(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
+                    case 'circle':
+                        this.renderCircle(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
+                    case 'wave':
+                        this.renderWave(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
+                    case 'dots':
+                        this.renderDots(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
+                    default:
+                        this.renderBars(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
                 }
             }
         }

@@ -11,6 +11,7 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 - **Mobile Responsive**: Optimized layout and controls for mobile devices
 - **Screen Wake Lock**: Keeps mobile screens awake during visualization (Chrome/Edge)
 - **High-DPI Support**: Crisp visuals on retina displays
+- **Multiple Visualizations**: Five styles that cycle every 10 seconds with manual selection
 
 ## Usage
 
@@ -19,8 +20,9 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 3. Allow microphone access when prompted
 4. Customize colors using the color pickers
 5. Adjust brightness with the slider
-6. Click "Fullscreen" for immersive visualizer-only viewing (rotate to landscape on mobile)
-7. Click "Stop" to end visualization
+6. Pick a visualization style from the dropdown or watch it change every 10 seconds
+7. Click "Fullscreen" for immersive visualizer-only viewing (rotate to landscape on mobile)
+8. Click "Stop" to end visualization
 
 ## Browser Compatibility
 
@@ -46,5 +48,6 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 - **Mid Freq Color**: Color for mid-range frequencies (green default)  
 - **High Freq Color**: Color for treble frequencies (blue default)
 - **Brightness**: Intensity multiplier from 0.1x to 2x
+- **Visualizer**: Dropdown to choose a visualization style or let it cycle automatically
 
 The visualizer smoothly interpolates colors across the frequency spectrum and applies amplitude-based intensity for dynamic visual effects.
