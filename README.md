@@ -11,7 +11,7 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 - **Mobile Responsive**: Optimized layout and controls for mobile devices
 - **Screen Wake Lock**: Keeps mobile screens awake during visualization (Chrome/Edge)
 - **High-DPI Support**: Crisp visuals on retina displays
-- **Multiple Visualizations**: Five styles that cycle every 10 seconds with manual selection
+- **Multiple Visualizations**: Six styles including a fractal tree that cycle every 10 seconds with manual selection
 
 ## Usage
 
