@@ -182,6 +182,7 @@
                 this.bufferLength = null;
                 this.animationId = null;
                 this.barHeights = [];
+                this.wakeLock = null;
                 
                 this.setupEventListeners();
                 this.setupCanvas();
@@ -191,6 +192,13 @@
                 this.startBtn.addEventListener('click', () => this.start());
                 this.stopBtn.addEventListener('click', () => this.stop());
                 window.addEventListener('resize', () => this.setupCanvas());
+                
+                // Handle visibility change to re-acquire wake lock if needed
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && this.animationId && !this.wakeLock) {
+                        this.requestWakeLock();
+                    }
+                });
             }
 
             setupCanvas() {
@@ -222,6 +230,29 @@
                 };
             }
 
+            async requestWakeLock() {
+                try {
+                    if ('wakeLock' in navigator) {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                        console.log('Screen wake lock acquired');
+                        
+                        this.wakeLock.addEventListener('release', () => {
+                            console.log('Screen wake lock released');
+                            this.wakeLock = null;
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Could not acquire screen wake lock:', error);
+                }
+            }
+
+            releaseWakeLock() {
+                if (this.wakeLock) {
+                    this.wakeLock.release();
+                    this.wakeLock = null;
+                }
+            }
+
             async start() {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -249,6 +280,9 @@
                     this.stopBtn.disabled = false;
                     this.status.textContent = 'Listening to microphone...';
                     
+                    // Request wake lock to keep screen awake
+                    await this.requestWakeLock();
+                    
                     this.draw();
                 } catch (error) {
                     console.error('Error accessing microphone:', error);
@@ -266,6 +300,9 @@
                     this.audioContext.close();
                     this.audioContext = null;
                 }
+                
+                // Release wake lock when stopping
+                this.releaseWakeLock();
                 
                 this.startBtn.disabled = false;
                 this.stopBtn.disabled = true;
