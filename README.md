@@ -7,7 +7,7 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 - **Real-time Audio Visualization**: Live frequency analysis with smooth bar animations
 - **Customizable Colors**: Interactive color pickers for low, mid, and high frequencies
 - **Brightness Control**: Adjustable intensity slider for optimal viewing
-- **Fullscreen Mode**: Immersive full-screen visualization experience
+- **Fullscreen Mode**: Immersive visualizer-only fullscreen optimized for mobile landscape
 - **Mobile Responsive**: Optimized layout and controls for mobile devices
 - **Screen Wake Lock**: Keeps mobile screens awake during visualization (Chrome/Edge)
 - **High-DPI Support**: Crisp visuals on retina displays
@@ -19,7 +19,7 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 3. Allow microphone access when prompted
 4. Customize colors using the color pickers
 5. Adjust brightness with the slider
-6. Click "Fullscreen" for immersive viewing
+6. Click "Fullscreen" for immersive visualizer-only viewing (rotate to landscape on mobile)
 7. Click "Stop" to end visualization
 
 ## Browser Compatibility
@@ -34,13 +34,14 @@ A real-time audio visualizer that creates colorful frequency bars from your micr
 - Uses Web Audio API for real-time frequency analysis
 - Canvas-based rendering with 60fps animations
 - Screen Wake Lock API prevents mobile screen timeout
-- Responsive design with CSS flexbox and media queries
+- Visualizer-only fullscreen API for immersive experience
+- Mobile landscape optimization with responsive design
 - High-DPI canvas rendering for sharp visuals
 
 ## Controls
 
 - **Start/Stop**: Begin or end audio capture and visualization
-- **Fullscreen**: Toggle immersive full-screen mode (ESC to exit)
+- **Fullscreen**: Enter visualizer-only fullscreen mode with floating exit button
 - **Low Freq Color**: Color for bass frequencies (red default)
 - **Mid Freq Color**: Color for mid-range frequencies (green default)  
 - **High Freq Color**: Color for treble frequencies (blue default)
