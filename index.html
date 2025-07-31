@@ -141,6 +141,9 @@
             <button id="stopBtn" disabled>Stop</button>
         </div>
         <div class="control-group">
+            <button id="fullscreenBtn">Fullscreen</button>
+        </div>
+        <div class="control-group">
             <label>Low Freq Color</label>
             <input type="color" id="lowColor" value="#ff0000">
         </div>
@@ -169,6 +172,7 @@
                 this.ctx = this.canvas.getContext('2d');
                 this.startBtn = document.getElementById('startBtn');
                 this.stopBtn = document.getElementById('stopBtn');
+                this.fullscreenBtn = document.getElementById('fullscreenBtn');
                 this.status = document.getElementById('status');
                 this.lowColor = document.getElementById('lowColor');
                 this.midColor = document.getElementById('midColor');
@@ -191,6 +195,7 @@
             setupEventListeners() {
                 this.startBtn.addEventListener('click', () => this.start());
                 this.stopBtn.addEventListener('click', () => this.stop());
+                this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
                 window.addEventListener('resize', () => this.setupCanvas());
                 
                 // Handle visibility change to re-acquire wake lock if needed
@@ -199,6 +204,12 @@
                         this.requestWakeLock();
                     }
                 });
+
+                // Handle fullscreen changes
+                document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
+                document.addEventListener('webkitfullscreenchange', () => this.onFullscreenChange());
+                document.addEventListener('mozfullscreenchange', () => this.onFullscreenChange());
+                document.addEventListener('MSFullscreenChange', () => this.onFullscreenChange());
             }
 
             setupCanvas() {
@@ -251,6 +262,48 @@
                     this.wakeLock.release();
                     this.wakeLock = null;
                 }
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement && 
+                    !document.webkitFullscreenElement && 
+                    !document.mozFullScreenElement && 
+                    !document.msFullscreenElement) {
+                    // Enter fullscreen
+                    const element = document.documentElement;
+                    if (element.requestFullscreen) {
+                        element.requestFullscreen();
+                    } else if (element.webkitRequestFullscreen) {
+                        element.webkitRequestFullscreen();
+                    } else if (element.mozRequestFullScreen) {
+                        element.mozRequestFullScreen();
+                    } else if (element.msRequestFullscreen) {
+                        element.msRequestFullscreen();
+                    }
+                } else {
+                    // Exit fullscreen
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            }
+
+            onFullscreenChange() {
+                const isFullscreen = !!(document.fullscreenElement || 
+                                      document.webkitFullscreenElement || 
+                                      document.mozFullScreenElement || 
+                                      document.msFullscreenElement);
+                
+                this.fullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+                
+                // Resize canvas when entering/exiting fullscreen
+                setTimeout(() => this.setupCanvas(), 100);
             }
 
             async start() {
