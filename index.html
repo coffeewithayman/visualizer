@@ -551,12 +551,14 @@
             }
 
             renderFractal(lowRgb, midRgb, highRgb, brightnessValue) {
+                const width = this.canvas.clientWidth;
+                const height = this.canvas.clientHeight;
                 const avg = this.dataArray.reduce((a, b) => a + b, 0) / this.bufferLength;
                 const amplitude = avg / 255;
                 const maxDepth = 6;
-                const length = (this.canvas.height / 4) * (0.5 + amplitude);
+                const length = (height / 4) * (0.5 + amplitude);
                 this.ctx.lineWidth = 2;
-                this.drawBranch(this.canvas.width / 2, this.canvas.height - 20,
+                this.drawBranch(width / 2, height - 20,
                     length, -Math.PI / 2, maxDepth, amplitude,
                     lowRgb, midRgb, highRgb, brightnessValue, maxDepth);
             }
