@@ -296,6 +296,7 @@
                 <option value="circle">Circle Bars</option>
                 <option value="wave">Waveform</option>
                 <option value="dots">Dots</option>
+                <option value="fractal">Fractal Tree</option>
             </select>
         </div>
     </div>
@@ -310,8 +311,8 @@
     <div id="status">Click "Start Listening" to begin audio visualization</div>
 
     <div id="version-info">
-        <div>v2.1.0</div>
-        <div>Updated: Jan 31, 2025</div>
+        <div>v2.2.0</div>
+        <div>Updated: Jul 31, 2025</div>
         <div><a href="https://github.com/coffeewithayman/visualizer" target="_blank">View on GitHub</a></div>
     </div>
 
@@ -331,7 +332,7 @@
                 this.highColor = document.getElementById('highColor');
                 this.brightness = document.getElementById('brightness');
                 this.styleSelect = document.getElementById('visualStyle');
-                this.visualStyles = ['bars', 'mirror', 'circle', 'wave', 'dots'];
+                this.visualStyles = ['bars', 'mirror', 'circle', 'wave', 'dots', 'fractal'];
                 this.currentStyle = 0;
                 this.autoSwitchTimer = null;
                 
@@ -549,6 +550,41 @@
                 }
             }
 
+            renderFractal(lowRgb, midRgb, highRgb, brightnessValue) {
+                const width = this.canvas.clientWidth;
+                const height = this.canvas.clientHeight;
+                const avg = this.dataArray.reduce((a, b) => a + b, 0) / this.bufferLength;
+                const amplitude = avg / 255;
+                const maxDepth = 6;
+                const length = (height / 4) * (0.5 + amplitude);
+                this.ctx.lineWidth = 2;
+                this.drawBranch(width / 2, height - 20,
+                    length, -Math.PI / 2, maxDepth, amplitude,
+                    lowRgb, midRgb, highRgb, brightnessValue, maxDepth);
+            }
+
+            drawBranch(x1, y1, length, angle, depth, amplitude, lowRgb, midRgb, highRgb, brightnessValue, maxDepth) {
+                if (depth === 0 || length < 2) return;
+
+                const x2 = x1 + length * Math.cos(angle);
+                const y2 = y1 + length * Math.sin(angle);
+                const idx = Math.floor(((maxDepth - depth) / maxDepth) * this.bufferLength);
+                const color = this.getColor(idx, length, lowRgb, midRgb, highRgb, brightnessValue);
+
+                this.ctx.strokeStyle = color;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.stroke();
+
+                const newLength = length * (0.7 + amplitude * 0.3);
+                const angleVar = 0.3 + amplitude * 0.4;
+                this.drawBranch(x2, y2, newLength, angle - angleVar, depth - 1, amplitude,
+                    lowRgb, midRgb, highRgb, brightnessValue, maxDepth);
+                this.drawBranch(x2, y2, newLength, angle + angleVar, depth - 1, amplitude,
+                    lowRgb, midRgb, highRgb, brightnessValue, maxDepth);
+            }
+
             async requestWakeLock() {
                 try {
                     if ('wakeLock' in navigator) {
@@ -728,6 +764,9 @@
                         break;
                     case 'dots':
                         this.renderDots(lowRgb, midRgb, highRgb, brightnessValue);
+                        break;
+                    case 'fractal':
+                        this.renderFractal(lowRgb, midRgb, highRgb, brightnessValue);
                         break;
                     default:
                         this.renderBars(lowRgb, midRgb, highRgb, brightnessValue);
